@@ -42,7 +42,47 @@ def search_urn(urn):
     cursor = conn.cursor()
 
     results = {}
+
     urn = urn.upper()
+
+    if urn.startswith("EIS"):
+
+        backend_urns = [urn]
+
+        results = {}
+
+        common_tables = ["API_LOG", "API_DETAILS", "ORCH_API_LOG", "ORCH_API_DETAILS"]
+
+        for name in common_tables:
+
+            cfg = TABLES[name]
+
+            results[name] = {
+                "columns": cfg["columns"],
+                "rows": []
+            }
+
+        backend_tables = ["BACKEND_LOG", "BACKEND_DETAILS"]
+
+        for name in backend_tables:
+
+            cfg = TABLES[name]
+
+            cursor.execute(f"""
+                SELECT {",".join(cfg["columns"])}
+                FROM {cfg["table"]}
+                WHERE URN = :urn
+            """, {"urn": urn})
+
+            results[name] = {
+                "columns": cfg["columns"],
+                "rows": cursor.fetchall()
+            }
+
+        cursor.close()
+        conn.close()
+
+        return results
 
     if len(urn) == 25:
         search_type = "EXACT"
@@ -55,33 +95,37 @@ def search_urn(urn):
 
     print(f"Search Mode: {search_type}")
 
-    # STEP 1: Always check ORCH first (FAST single query)
     cursor.execute(f"""
-        SELECT URN_CHILD
-        FROM ORCH_API_LOG
+        SELECT DISTINCT URN
+        FROM API_LOG
         WHERE URN {operator} :urn
-        AND URN_CHILD IS NOT NULL
-        FETCH FIRST 1 ROWS ONLY
     """, {"urn": pattern})
 
-    orch_row = cursor.fetchone()
+    parent_urns = [r[0] for r in cursor.fetchall()]
 
-    if orch_row:
-        flow_type = "ORCH"
-        backend_urns = [r[0] for r in cursor.execute(f"""
+    if search_type == "EXACT" and not parent_urns:
+        parent_urns = [urn]
+
+    backend_urns = []
+
+    for parent_urn in parent_urns:
+
+        cursor.execute("""
             SELECT DISTINCT URN_CHILD
             FROM ORCH_API_LOG
-            WHERE URN {operator} :urn
+            WHERE URN = :urn
             AND URN_CHILD IS NOT NULL
-        """, {"urn": pattern})]
-    else:
-        flow_type = "NORMAL"
-        backend_urns = [urn]
+        """, {"urn": parent_urn})
 
-    print(f"Flow Type: {flow_type}")
-    print(f"Backend URNs: {backend_urns}")
+        children = [r[0] for r in cursor.fetchall()]
 
-    # STEP 2: Common tables (always run)
+        if children:
+            backend_urns.extend(children)
+        else:
+            backend_urns.append(parent_urn)
+
+    backend_urns = list(set(backend_urns))
+
     common_tables = ["API_LOG", "API_DETAILS", "ORCH_API_LOG", "ORCH_API_DETAILS"]
 
     for name in common_tables:
@@ -102,7 +146,6 @@ def search_urn(urn):
             "rows": rows
         }
 
-    # STEP 3: Backend tables (based on flow)
     backend_tables = ["BACKEND_LOG", "BACKEND_DETAILS"]
 
     for name in backend_tables:
@@ -131,7 +174,8 @@ def search_urn(urn):
     conn.close()
 
     return results
-    
+
+
 def pretty_print_payload(value):
 
     if value is None:
@@ -166,6 +210,7 @@ def pretty_print_payload(value):
 
     return text
 
+
 def generate_html(urn, results):
 
     file = "urn_report.html"
@@ -184,9 +229,7 @@ def generate_html(urn, results):
             background-color: #f5f5f5;
         }
 
-        h2 {
-            color: #333;
-        }
+        h2 { color: #333; }
 
         h3 {
             background-color: #333;
@@ -214,15 +257,11 @@ def generate_html(urn, results):
             white-space: pre-wrap;
         }
 
-        .no-records {
-            color: red;
-            font-weight: bold;
-        }
-
         </style>
         </head>
         <body>
         """)
+
         f.write(f"<h2>URN Report: {urn}</h2>")
 
         for table, data in results.items():
@@ -252,9 +291,11 @@ def generate_html(urn, results):
 
     return file
 
+
 def main():
 
     urn = input("Enter URN: ").strip()
+
     if not urn:
         print("URN cannot be empty")
         return
@@ -276,6 +317,7 @@ def main():
     file = generate_html(urn, results)
 
     print("\nReport Generated:", file)
+
 
 if __name__ == "__main__":
     main()
