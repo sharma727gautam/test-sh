@@ -4,9 +4,9 @@ from datetime import datetime
 import html
 
 DB_CONFIG = {
-    "user": os.getenv("DB_USER"),
-    "password": os.getenv("DB_PASSWORD"),
-    "dsn": os.getenv("DB_DSN")
+    "user": "SYSTEM",
+    "password": "oracle",
+    "dsn": "localhost:1521/XEPDB1"
 }
 
 TABLES = {
@@ -42,23 +42,57 @@ def search_urn(urn):
     cursor = conn.cursor()
 
     results = {}
-    pattern = f"%{urn}%"
+    urn = urn.upper()
 
-    print("\n==============================")
-    print("Starting URN Search Process")
-    print("==============================\n")
+    if len(urn) == 25:
+        search_type = "EXACT"
+        pattern = urn
+        operator = "="
+    else:
+        search_type = "PREFIX"
+        pattern = urn + "%"
+        operator = "LIKE"
 
-    for name, cfg in TABLES.items():
+    print(f"Search Mode: {search_type}")
+
+    # STEP 1: Always check ORCH first (FAST single query)
+    cursor.execute(f"""
+        SELECT URN_CHILD
+        FROM ORCH_API_LOG
+        WHERE URN {operator} :urn
+        AND URN_CHILD IS NOT NULL
+        FETCH FIRST 1 ROWS ONLY
+    """, {"urn": pattern})
+
+    orch_row = cursor.fetchone()
+
+    if orch_row:
+        flow_type = "ORCH"
+        backend_urns = [r[0] for r in cursor.execute(f"""
+            SELECT DISTINCT URN_CHILD
+            FROM ORCH_API_LOG
+            WHERE URN {operator} :urn
+            AND URN_CHILD IS NOT NULL
+        """, {"urn": pattern})]
+    else:
+        flow_type = "NORMAL"
+        backend_urns = [urn]
+
+    print(f"Flow Type: {flow_type}")
+    print(f"Backend URNs: {backend_urns}")
+
+    # STEP 2: Common tables (always run)
+    common_tables = ["API_LOG", "API_DETAILS", "ORCH_API_LOG", "ORCH_API_DETAILS"]
+
+    for name in common_tables:
+
+        cfg = TABLES[name]
 
         sql = f"""
         SELECT {",".join(cfg["columns"])}
         FROM {cfg["table"]}
-        WHERE URN LIKE :urn
+        WHERE URN {operator} :urn
         """
-
-        print(f"Running query on table: {cfg['table']}")
-        print(f"Query: {sql.strip()}")
-        print(f"With URN LIKE: {pattern}")
 
         cursor.execute(sql, {"urn": pattern})
         rows = cursor.fetchall()
@@ -68,11 +102,36 @@ def search_urn(urn):
             "rows": rows
         }
 
+    # STEP 3: Backend tables (based on flow)
+    backend_tables = ["BACKEND_LOG", "BACKEND_DETAILS"]
+
+    for name in backend_tables:
+
+        cfg = TABLES[name]
+
+        all_rows = []
+
+        for burl in backend_urns:
+
+            sql = f"""
+            SELECT {",".join(cfg["columns"])}
+            FROM {cfg["table"]}
+            WHERE URN = :urn
+            """
+
+            cursor.execute(sql, {"urn": burl})
+            all_rows.extend(cursor.fetchall())
+
+        results[name] = {
+            "columns": cfg["columns"],
+            "rows": all_rows
+        }
+
     cursor.close()
     conn.close()
 
     return results
-
+    
 def pretty_print_payload(value):
 
     if value is None:
@@ -196,6 +255,21 @@ def generate_html(urn, results):
 def main():
 
     urn = input("Enter URN: ").strip()
+    if not urn:
+        print("URN cannot be empty")
+        return
+
+    if len(urn) < 18:
+        print("URN must be at least 18 characters")
+        return
+
+    if len(urn) > 25:
+        print("URN cannot be greater than 25 characters")
+        return
+
+    if not (urn.startswith("SB") or urn.startswith("EIS")):
+        print("URN must start with SB or EIS")
+        return
 
     results = search_urn(urn)
 
