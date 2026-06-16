@@ -223,56 +223,215 @@ def generate_html(urn, results):
         <title>URN Report</title>
         <style>
 
-        body {
-            font-family: Arial;
-            margin: 20px;
-            background-color: #f5f5f5;
+        * {
+            box-sizing: border-box;
         }
 
-        h2 { color: #333; }
+        body {
+            margin: 0;
+            padding: 25px;
+            background-color: #0f172a;
+            color: #e2e8f0;
+            font-family: "Segoe UI", Arial, sans-serif;
+        }
 
-        h3 {
-            background-color: #333;
+        h2 {
+            text-align: center;
+            margin-bottom: 10px;
+            color: #f8fafc;
+        }
+
+        .summary {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 25px;
+            text-align: center;
+            font-size: 15px;
+        }
+
+        .section {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            overflow: hidden;
+            box-shadow: 0 0 15px rgba(0,0,0,0.35);
+        }
+
+        .section-header {
+            background: #2563eb;
             color: white;
-            padding: 8px;
+            padding: 14px;
+            font-size: 17px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .table-container {
+            overflow-x: auto;
         }
 
         table {
-            border-collapse: collapse;
             width: 100%;
-            margin-bottom: 30px;
-            background: white;
+            border-collapse: collapse;
         }
 
         th {
-            background-color: #222;
-            color: white;
-            padding: 8px;
+            background: #111827;
+            color: #f8fafc;
+            padding: 12px;
+            text-align: left;
+            border-bottom: 2px solid #334155;
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
 
         td {
-            border: 1px solid #ddd;
-            padding: 8px;
+            padding: 10px;
+            border-bottom: 1px solid #334155;
+            color: #e5e7eb;
             vertical-align: top;
+            white-space: nowrap;
+        }
+
+        tr:nth-child(even) {
+            background-color: #273449;
+        }
+
+        tr:hover {
+            background-color: #334155;
+        }
+
+        .no-records {
+            padding: 20px;
+            color: #f87171;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .payload {
+            position: relative;
+            background: #111827;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            padding: 12px;
+            padding-top: 12px;
+            max-height: 350px;
+            max-width: 900px;
+            overflow-y: auto;
+            overflow-x: auto;
+            font-family: Consolas, Monaco, monospace;
+            font-size: 13px;
+            color: #93c5fd;
             white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 6px;
+            right: 8px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            color: #94a3b8;
+            padding: 2px;
+            transition: all 0.2s ease;
+        }
+
+        .copy-btn:hover {
+            color: #60a5fa;
+        }
+        .success {
+            color: #22c55e;
+            font-weight: bold;
+        }
+
+        .failed {
+            color: #ef4444;
+            font-weight: bold;
+        }
+
+        .null-value {
+            color: #94a3b8;
+            font-style: italic;
+        }
+
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #111827;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
         }
 
         </style>
+        <script>
+
+        function copyToClipboard(button, text) {
+
+            navigator.clipboard.writeText(text)
+            .then(() => {
+
+                const original = button.innerHTML;
+
+                button.innerHTML = "✔";
+
+                setTimeout(() => {
+                    button.innerHTML = original;
+                }, 2000);
+
+            })
+            .catch(err => {
+                console.error(err);
+            });
+
+        }
+
+        </script>
         </head>
         <body>
         """)
 
-        f.write(f"<h2>URN Report: {urn}</h2>")
+        f.write(f"""
+        <h2>RRN Finder</h2>
+
+        <div class="summary">
+        <b>URN:</b> {urn}
+        <br><br>
+        <b>Generated:</b> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+        </div>
+        """)
 
         for table, data in results.items():
 
-            f.write(f"<h3>{table} ({len(data['rows'])} rows)</h3>")
+            f.write(f"""
+            <div class="section">
+            <div class="section-header">
+            {table} | Records Found: {len(data['rows'])}
+            </div>
+            """)
 
             if not data["rows"]:
-                f.write("<p>No Records Found</p>")
+                f.write('<div class="no-records">No Records Found</div></div>')
                 continue
 
-            f.write("<table border='1'>")
+            f.write('<div class="table-container">')
+            f.write("<table>")
 
             f.write("<tr>")
             for c in data["columns"]:
@@ -282,10 +441,26 @@ def generate_html(urn, results):
             for row in data["rows"]:
                 f.write("<tr>")
                 for v in row:
-                    f.write(f"<td>{html.escape(str(pretty_print_payload(v)))}</td>")
+                    formatted = str(pretty_print_payload(v))
+                    escaped = html.escape(formatted)
+
+                    if len(formatted) > 100:
+
+                        js_text = html.escape(formatted, quote=True)
+
+                        f.write(
+                        f"<td><div class='payload'>"
+                        f"<button class='copy-btn' onclick='copyToClipboard(this, `{js_text}`)'>📋</button>"
+                        f"{escaped}"
+                        f"</div></td>"
+                        )
+                    else:
+                        f.write(f"<td>{escaped}</td>")
                 f.write("</tr>")
 
             f.write("</table>")
+            f.write("</div>")
+            f.write("</div>")
 
         f.write("</body></html>")
 
