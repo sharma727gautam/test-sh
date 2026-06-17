@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>RRN Finder</title>
+
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+
+<div class="search-container">
+
+    <h1>RRN Finder</h1>
+
+    <form id="urnForm" action="/search" method="get">
+
+        <input
+            type="text"
+            id="urn"
+            name="urn"
+            placeholder="Enter URN"
+            required
+        >
+
+        <button id="searchBtn" type="submit">
+            Search
+        </button>
+
+        <div id="errorMessage"></div>
+
+    </form>
+
+    <div id="loadingOverlay">
+
+        <div class="loader-box">
+
+            <div class="spinner"></div>
+
+            <div class="loading-text">
+                Searching URN...
+            </div>
+
+            <div class="loading-subtext">
+                Please wait while logs are fetched
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- <script>
+
+document.getElementById("urnForm").addEventListener("submit", function(e) {
+
+    const urn = document.getElementById("urn").value.trim();
+    const errorDiv = document.getElementById("errorMessage");
+
+    errorDiv.innerHTML = "";
+
+    if (urn.length < 18) {
+        e.preventDefault();
+        errorDiv.innerHTML = "URN must be at least 18 characters";
+        return;
+    }
+
+    if (urn.length > 25) {
+        e.preventDefault();
+        errorDiv.innerHTML = "URN cannot be greater than 25 characters";
+        return;
+    }
+
+    if (!(urn.startsWith("SB") || urn.startsWith("EIS"))) {
+        e.preventDefault();
+        errorDiv.innerHTML = "URN must start with SB or EIS";
+        return;
+    }
+
+});
+
+</script> -->
+<div id="loadingOverlay">
+
+    <div class="loader-box">
+
+        <div class="spinner"></div>
+
+        <div class="loading-text">
+            Searching URN...
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+
+document.getElementById("searchForm").addEventListener("submit", function() {
+
+    document.getElementById("loadingOverlay").style.display = "flex";
+
+});
+
+</script>
+<script>
+
+const form = document.getElementById("urnForm");
+
+form.addEventListener("submit", function(e) {
+
+    const urn = document.getElementById("urn").value.trim();
+    const errorDiv = document.getElementById("errorMessage");
+
+    errorDiv.innerHTML = "";
+
+    if (urn.length < 18) {
+        e.preventDefault();
+        errorDiv.innerHTML = "URN must be at least 18 characters";
+        return;
+    }
+
+    if (urn.length > 25) {
+        e.preventDefault();
+        errorDiv.innerHTML = "URN cannot be greater than 25 characters";
+        return;
+    }
+
+    if (!(urn.startsWith("SB") || urn.startsWith("EIS"))) {
+        e.preventDefault();
+        errorDiv.innerHTML = "URN must start with SB or EIS";
+        return;
+    }
+
+    document.getElementById("loadingOverlay").style.display = "flex";
+
+    document.getElementById("searchBtn").disabled = true;
+
+});
+
+</script>
+</body>
+</html>
