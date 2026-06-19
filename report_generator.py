@@ -2,6 +2,17 @@ from datetime import datetime
 import html
 from db_search import pretty_print_payload
 
+def is_small_payload(text):
+    if text is None:
+        return True
+
+    s = str(text).strip()
+
+    if not s:
+        return True
+
+    return len(s.split("\n")) <= 5 and len(s) <= 500
+
 def generate_html(urn, results):
 
     html_parts = []
@@ -10,6 +21,7 @@ def generate_html(urn, results):
     <html>
     <head>
     <title>URN Report</title>
+    <meta charset="UTF-8">
     <style>
 
     * {
@@ -31,8 +43,8 @@ def generate_html(urn, results):
     }
 
     .summary {
-        background: #1e293b;
-        border: 1px solid #334155;
+        background: #1a1f2e;
+        border: 1px solid #2a3142;
         border-radius: 10px;
         padding: 15px;
         margin-bottom: 25px;
@@ -41,23 +53,28 @@ def generate_html(urn, results):
     }
 
     .section {
-        background: #1e293b;
-        border: 1px solid #334155;
+        background: #1a1f2e;
+        border: 1px solid #2a3142;
         border-radius: 10px;
         margin-bottom: 25px;
         overflow: hidden;
         box-shadow: 0 0 15px rgba(0,0,0,0.35);
     }
 
-    .section-header {
-        background: #2563eb;
-        color: white;
-        padding: 14px;
-        font-size: 17px;
-        font-weight: 600;
-        letter-spacing: 0.5px;
-    }
 
+    .section-header {
+        background:#232b3b;
+        color:#dbe2ea;
+        border-bottom: 1px solid #323b4d;
+        padding:14px;
+        text-align:center;
+        font-size:17px;
+        font-weight:600;
+        cursor:pointer;
+    }
+    .section-body{
+        display:block;
+    }
     .table-container {
         overflow-x: auto;
     }
@@ -68,8 +85,8 @@ def generate_html(urn, results):
     }
 
     th {
-        background: #111827;
-        color: #f8fafc;
+        background: #161c28;
+        color: #dbe2ea;
         padding: 12px;
         text-align: left;
         border-bottom: 2px solid #334155;
@@ -91,7 +108,7 @@ def generate_html(urn, results):
     }
 
     tr:hover {
-        background-color: #334155;
+        background-color: #2a3142;
     }
 
     .no-records {
@@ -113,7 +130,7 @@ def generate_html(urn, results):
         overflow-x: auto;
         font-family: Consolas, Monaco, monospace;
         font-size: 13px;
-        color: #93c5fd;
+        color: #cbd5e1;
         white-space: pre-wrap;
         word-break: break-word;
     }
@@ -126,13 +143,13 @@ def generate_html(urn, results):
         border: none;
         cursor: pointer;
         font-size: 16px;
-        color: #94a3b8;
+        color:#7c8799;
         padding: 2px;
         transition: all 0.2s ease;
     }
 
     .copy-btn:hover {
-        color: #60a5fa;
+        color:#cbd5e1;
     }
 
     ::-webkit-scrollbar {
@@ -193,7 +210,7 @@ def generate_html(urn, results):
     }
 
     .search-btn{
-        background:#2563eb;
+        background:#374151;
         color:white;
         border:none;
         padding:12px 18px;
@@ -203,7 +220,95 @@ def generate_html(urn, results):
     }
 
     .search-btn:hover{
-        background:#1d4ed8;
+        background:#4b5563;
+    }
+
+    .view-btn{
+        background:#374151;
+        color:white;
+        border:none;
+        border-radius:6px;
+        padding:8px 12px;
+        cursor:pointer;
+        font-size:13px;
+    }
+
+    .view-btn:hover{
+        background:#4b5563;
+    }
+    .modal{
+        display:none;
+        position:fixed;
+        z-index:99999;
+        left:0;
+        top:0;
+        width:100%;
+        height:100%;
+        background:rgba(0,0,0,0.85);
+    }
+
+    .modal-content{
+        background:#111827;
+        width:85%;
+        max-width:1200px;
+        margin:40px auto;
+        border-radius:12px;
+        border:1px solid #334155;
+        overflow:hidden;
+    }
+
+    .modal-header{
+        background:#232b3b;
+        border-bottom:1px solid #323b4d;
+        color:white;
+        padding:15px;
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+    }
+
+    .modal-body{
+        padding:20px;
+        max-height:70vh;
+        overflow:auto;
+        white-space:pre-wrap;
+        font-family:Consolas, monospace;
+        color:#93c5fd;
+    }
+
+    .modal-actions{
+        padding:15px;
+        background:#0f172a;
+        text-align:right;
+    }
+
+    .modal-btn{
+        background:#2563eb;
+        color:white;
+        border:none;
+        padding:10px 15px;
+        border-radius:6px;
+        cursor:pointer;
+        margin-left:10px;
+    }
+    .inline-payload{
+        font-family: Consolas, monospace;
+        font-size: 12px;
+        color: #93c5fd;
+        margin-right: 6px;
+    }
+
+    .copy-mini{
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        color: #94a3b8;
+        font-size: 14px;
+        padding: 2px;
+    }
+
+    .copy-mini:hover{
+        color: #60a5fa;
     }
     </style>
 
@@ -215,7 +320,7 @@ def generate_html(urn, results):
         .then(() => {
 
             const original = button.innerHTML;
-            button.innerHTML = "✔";
+            button.innerHTML = "&#10004;";
 
             setTimeout(() => {
                 button.innerHTML = original;
@@ -225,7 +330,64 @@ def generate_html(urn, results):
         .catch(err => console.error(err));
 
     }
+    let modalContent = "";
 
+    function openModal(title, content){
+
+        modalContent = content;
+
+        document.getElementById("modalTitle").innerText = title;
+        document.getElementById("modalBody").innerText = content;
+
+        document.getElementById("payloadModal").style.display = "block";
+    }
+
+    function closeModal(){
+
+        document.getElementById("payloadModal").style.display = "none";
+    }
+
+    function copyModalContent(button, text){
+
+        navigator.clipboard.writeText(text).then(() => {
+
+            const original = button.innerHTML;
+            button.innerHTML = "&#10004;";
+
+            setTimeout(() => {
+                button.innerHTML = original;
+            }, 1500);
+
+        });
+
+    }
+    function miniCopy(button, text){
+
+        navigator.clipboard.writeText(text).then(() => {
+
+            const original = button.innerHTML;
+            button.innerHTML = "&#10004;";
+
+            setTimeout(() => {
+                button.innerHTML = original;
+            }, 1500);
+
+        });
+
+    }
+    function toggleSection(id){
+
+        const section = document.getElementById(id);
+
+        if(section.style.display === "none"){
+            section.style.display = "block";
+        }
+        else{
+            section.style.display = "none";
+        }
+
+    }
+    
     </script>
 
     </head>
@@ -235,7 +397,7 @@ def generate_html(urn, results):
     html_parts.append(f"""
     <div class="top-bar">
 
-        <form id="searchForm" action="/search" method="get" class="search-form">
+        <form id="searchForm" action="search" method="get" class="search-form">
 
             <input
                 type="text"
@@ -267,9 +429,18 @@ def generate_html(urn, results):
 
         html_parts.append(f"""
         <div class="section">
-        <div class="section-header">
-        {table} | Records Found: {len(data['rows'])}
+
+        <div
+            class="section-header"
+            onclick="toggleSection('body_{table}')">
+
+            ▼ {table} | Records Found: {len(data['rows'])}
+
         </div>
+
+        <div
+            id="body_{table}"
+            class="section-body">
         """)
 
         if not data["rows"]:
@@ -286,28 +457,122 @@ def generate_html(urn, results):
         for row in data["rows"]:
             html_parts.append("<tr>")
 
-            for v in row:
-
+            # for v in row:
+            for col_index, v in enumerate(row):
                 formatted = str(pretty_print_payload(v))
                 escaped = html.escape(formatted)
 
-                if len(formatted) > 100:
+                # if len(formatted) > 100:
 
-                    js_text = html.escape(formatted, quote=True)
+                #     js_text = html.escape(formatted, quote=True)
 
-                    html_parts.append(
-                        f"<td><div class='payload'>"
-                        f"<button class='copy-btn' onclick='copyToClipboard(this, `{js_text}`)'>📋</button>"
-                        f"{escaped}"
-                        f"</div></td>"
-                    )
+                #     html_parts.append(
+                #         f"<td><div class='payload'>"
+                #         f"<button class='copy-btn' onclick='copyToClipboard(this, `{js_text}`)'>📋</button>"
+                #         f"{escaped}"
+                #         f"</div></td>"
+                #     )
+                # else:
+                #     html_parts.append(f"<td>{escaped}</td>")
+                payload_columns = [
+                    "INPUT_DATA",
+                    "OUTPUT_DATA",
+                    "EXCEPTION",
+                    "ACTUAL_ERROR"
+                ]
+
+                # column_name = data["columns"][row.index(v)]
+                column_name = data["columns"][col_index]
+
+                if column_name in payload_columns:
+
+                    if formatted is None or str(formatted).strip() == "":
+                        html_parts.append("<td class='null-value'>-</td>")
+
+                    elif is_small_payload(formatted):
+
+                        js_text = html.escape(formatted, quote=True)
+
+                        html_parts.append(f"""
+                        <td>
+                            <span class="inline-payload">{escaped}</span>
+
+                            <button class="copy-mini"
+                                onclick="miniCopy(this, `{js_text}`)">
+                                &#128203;
+                            </button>
+                        </td>
+                        """)
+
+                    else:
+
+                        js_text = html.escape(formatted, quote=True)
+
+                        html_parts.append(f"""
+                        <td>
+                            <button class="view-btn"
+                                onclick="openModal('{column_name}', `{js_text}`)">
+                                &#128196; View
+                            </button>
+
+                            <button class="copy-mini"
+                                onclick="miniCopy(this, `{js_text}`)">
+                                &#128203;
+                            </button>
+                        </td>
+                        """)
                 else:
                     html_parts.append(f"<td>{escaped}</td>")
-
             html_parts.append("</tr>")
 
-        html_parts.append("</table></div></div>")
+        html_parts.append("</table></div></div></div>")
 
-    html_parts.append("</body></html>")
+    html_parts.append("""
+
+    <div id="payloadModal" class="modal">
+
+        <div class="modal-content">
+
+            <div class="modal-header">
+
+                <span id="modalTitle">Payload Viewer</span>
+
+                <button
+                    class="modal-btn"
+                    onclick="closeModal()">
+                    &#10006;
+                </button>
+
+            </div>
+
+            <div
+                id="modalBody"
+                class="modal-body">
+            </div>
+
+            <div class="modal-actions">
+
+                <button
+                    class="modal-btn"
+                    onclick="copyModalContent(this, `{js_text}`)">
+                    &#128203; Copy
+                </button>
+
+                <button
+                    class="modal-btn"
+                    onclick="closeModal()">
+                    Close
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    </body>
+    </html>
+
+    """)
 
     return "".join(html_parts)
