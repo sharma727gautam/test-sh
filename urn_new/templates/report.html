@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
+    <title>RRN Finder</title>
+
+    <link
+        rel="stylesheet"
+        href="/static/css/report.css">
+
+</head>
+
+<body>
+
+    <div class="page">
+
+        <h1 class="page-title">
+            RRN Finder
+        </h1>
+        <div class="top-actions">
+
+            <a href="/" class="back-btn">
+
+                Back
+
+            </a>
+
+        </div>
+        {{SUMMARY}}
+
+        <div class="tabs">
+
+            {{TABS}}
+
+        </div>
+
+        <div class="report-wrapper">
+
+            {{REPORT_CONTENT}}
+
+        </div>
+
+    </div>
+
+    <!-- Payload Modal -->
+
+    <div
+        id="payloadModal"
+        class="modal">
+
+        <div class="modal-content">
+
+            <div class="modal-header">
+
+                <span id="modalTitle">
+
+                    Payload Viewer
+
+                </span>
+
+                <button
+                    class="modal-btn"
+                    onclick="closeModal()">
+
+                    ✕
+
+                </button>
+
+            </div>
+
+            <div
+                id="modalBody"
+                class="modal-body">
+
+            </div>
+
+            <div class="modal-actions">
+
+                <button
+                    id="copyModalBtn"
+                    class="modal-btn">
+
+                    📋 Copy
+
+                </button>
+
+                <button
+                    class="modal-btn"
+                    onclick="closeModal()">
+
+                    Close
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <script src="/static/js/report.js"></script>
+
+</body>
+
+</html>

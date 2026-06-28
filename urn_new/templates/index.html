@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <title>RRN Finder</title>
+
+    <link rel="stylesheet" href="/static/css/index.css">
+
+</head>
+
+<body>
+
+    <div class="search-container">
+
+        <h1>RRN Finder</h1>
+
+        <form
+            id="urnForm"
+            action="/search"
+            method="get">
+
+            <input
+                type="text"
+                id="urn"
+                name="urn"
+                placeholder="Enter URN"
+                required>
+
+            <button
+                id="searchBtn"
+                type="submit">
+
+                Search
+
+            </button>
+
+        </form>
+
+        <div id="errorMessage"></div>
+
+    </div>
+
+    <div id="loadingOverlay">
+
+        <div class="loader-box">
+
+            <div class="spinner"></div>
+
+            <div class="loading-text">
+
+                Searching URN...
+
+            </div>
+
+            <div class="loading-subtext">
+
+                Please wait while logs are fetched
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <script src="/static/js/index.js"></script>
+
+</body>
+
+</html>
